@@ -1,0 +1,32 @@
+````markdown
+---
+title: "Untitled"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+
+
+library(flexdashboard)
+
+library(data.table)
+
+library(tidyverse)
+
+library(MASS)
+
+library(OneR)
+
+bins= 50
+tweak = 10
+data = fread("D:/Work/Code/Pairwise_phip/pad_test_parwise.csv")
+
+data_2 = data %>% dplyr::select(ID,Unmod,PAD4)
+# return(colnames(data))```
+
+
+```
+
+Note that the `echo = FALSE` parameter was added to the code chunk to prevent printing of the R code that generated the plot.
+````

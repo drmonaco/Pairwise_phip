@@ -1,0 +1,90 @@
+---
+title: "Pairwise"
+output: 
+  flexdashboard::flex_dashboard:
+    orientation: columns
+    vertical_layout: fill
+    runtime: shiny
+---
+
+```{r setup, include=FALSE}
+library(flexdashboard)
+library(data.table)
+library(MASS)
+library(shiny)
+library(plotly)
+library(tidyverse)
+library(OneR)
+new = function(bins = 50,tweak = 10,thresh = 10){
+data = fread("D:/Work/Code/Pairwise_phip/pad_test_parwise.csv")
+data_2 = data %>% select(ID,Unmod,PAD4)
+data_2 = data_2 %>% arrange(-Unmod)
+m1 <- rlm(data_2[1:500,3] ~ data_2[1:500,2]+0, data = data_2[1:500,])
+data_2 = data_2 %>% mutate(residual = data_2[,3]-(data_2[,2]*m1$coefficients[1]))#+m1$coefficients[1]))
+sd_data = data_2 #%>% filter(Unmod >1) %>% filter(PAD4 >1 )
+
+final = list()
+y=  bins
+sub_library = sd_data %>% select(-ID)
+sub_library = sub_library[order(sub_library[,1]),,drop = FALSE]
+stdev  = c()
+med = c()
+
+for (R2 in 0:bins){
+  Index = floor((1+(dim(sub_library)[1]/(y+1))*R2):(dim(sub_library)[1]/(y+1)+dim(sub_library)[1]/(y+1)*R2))
+  Case_index = sub_library[(Index),]
+  stdev[R2+1] = sd(Case_index[,3])
+  med[R2+1] = median(Case_index[,1])
+}
+if(max(med[1:(bins-1)])!=0){
+  eq = rlm(stdev[1:(bins-1)]~med[1:(bins-1)])
+  x = (sub_library[,1]*coef(eq)[2]+coef(eq)[1])
+  x[x<tweak] = tweak
+  z_scores = sub_library[,3]/x
+
+
+  if(coef(eq)[1]<0){
+    eq = rlm(stdev[1:(bins-1)]~med[1:(bins-1)]+0)
+    x = (sub_library[,3]*coef(eq)[2]+coef(eq)[1])
+    x[x<tweak] = tweak
+    z_scores = sub_library[,3]/x
+  }
+}else {
+  z_scores =  sub_library[,3]*0
+}
+final = cbind(sub_library,z_scores)
+final$color = final$z_scores>thresh
+
+
+g = ggplot(final,aes(x = Unmod,y = PAD4,group =c(z_scores), color=  color,text=c("country")))+geom_count()+scale_y_log10()+scale_x_log10()
+return(ggplotly(g))
+}
+
+```
+
+Column {data-width=650}
+-----------------------------------------------------------------------
+
+### Chart A
+
+```{r}
+renderPlotly({
+new(input$id1,input$id2,input$id3)
+})
+```
+
+Column {data-width=350}
+-----------------------------------------------------------------------
+
+### Chart B
+
+```{r}
+numericInput(inputId = "id1", label = "bins",value = 50)
+numericInput(inputId = "id2", label = "tweak",value = 10)
+numericInput(inputId = "id3", label = "z",value = 10)
+
+
+```
+
+
+
